@@ -1,7 +1,9 @@
 const express = require('express');
+const cors = require('cors')
 const app = express();
-app.use(express.json());
 const PORT = 8080;
+app.use(express.json());
+app.use(cors());
 
 const database = {
     users: [
@@ -31,7 +33,7 @@ app.get('/', (req, res) => {
 app.post('/signin', (req, res) => {
     if (req.body.email === database.users[0].email
         && req.body.password === database.users[0].password) {
-        res.json('success')
+        res.json(database.users[0])
     } else {
         res.status(400).json('error logging in');
     }
@@ -80,6 +82,6 @@ app.post('/image', (req, res) => {
 })
 
 app.listen(PORT, () => {
-    console.log(`app is running on PORT : ${PORT}.`);
+    console.log(`app is running on http://localhost:${PORT}.`);
 })
 
