@@ -1,9 +1,24 @@
 const express = require('express');
-const cors = require('cors')
+const cors = require('cors');
 const app = express();
 const PORT = 8080;
 app.use(express.json());
 app.use(cors());
+const knex = require('knex');
+
+const pgdb = knex({
+    client: 'pg',
+    connection: {
+        host: '127.0.0.1',
+        user: 'postgres',
+        password: 'pwd@123',
+        database: 'smart-brain',
+    }
+});
+
+// pgdb.select('*').from('users')
+//     .then(data => console.log(data))
+
 
 const database = {
     users: [
@@ -41,30 +56,33 @@ app.post('/signin', (req, res) => {
 
 app.post('/register', (req, res) => {
     const { name, email, password } = req.body;
-    database.users.push({
-        id: '103',
-        name: name,
-        email: email,
-        password: password,
-        entries: 0,
-        joined: new Date(),
-    });
-    res.json(database.users[database.users.length - 1])
+    pgdb('users')
+        .returning('*')
+        .insert({
+            email: email,
+            name: name,
+            joined: new Date()
+        })
+        .then(user => { res.json(user[0]) })
+        .catch(error => res.status(400).json('unable to register'))
 })
 
 app.get('/profile/:id', (req, res) => {
     const { id } = req.params;
-    let found = false;
-    database.users.forEach(user => {
-        if (user.id === id) {
-            found = true;
-            return res.json(user)
-        }
-    });
-    if (!found) {
-        res.status(400).json('no such user')
-    }
-})
+    pgdb.select('*').from('users')
+        .where({
+            id: id
+        })
+        .then(user => {
+            if (user.legth) {
+                res.json(user[0]);
+            }
+            else {
+                res.status(400).json('user not found');
+            }
+        })
+        .catch(error => res.status(400).json('error getting user'))
+});
 
 app.put('/image', (req, res) => {
     const { id } = req.body;
