@@ -74,7 +74,7 @@ app.get('/profile/:id', (req, res) => {
             id: id
         })
         .then(user => {
-            if (user.legth) {
+            if (user.length) {
                 res.json(user[0]);
             }
             else {
@@ -86,17 +86,16 @@ app.get('/profile/:id', (req, res) => {
 
 app.put('/image', (req, res) => {
     const { id } = req.body;
-    let found = false;
-    database.users.forEach(user => {
-        if (user.id === id) {
-            found = true;
-            user.entries++;
-            return res.json(user.entries)
-        }
-    });
-    if (!found) {
-        res.status(400).json('no such user')
-    }
+
+    pgdb('users')
+        .where('id', '=', id)
+        .increment('entries', 1)
+        .returning('entries')
+        .then(entries => {
+            res.json(entries[0].entries);
+        })
+        .catch(error => res.status(400).json('unable to get entries'))
+
 })
 
 app.listen(PORT, () => {
