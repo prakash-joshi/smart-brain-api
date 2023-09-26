@@ -4,6 +4,8 @@ const app = express();
 const PORT = 8080;
 app.use(express.json());
 app.use(cors());
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 const knex = require('knex');
 
 const pgdb = knex({
@@ -16,55 +18,60 @@ const pgdb = knex({
     }
 });
 
-// pgdb.select('*').from('users')
-//     .then(data => console.log(data))
-
-
-const database = {
-    users: [
-        {
-            id: '101',
-            name: 'Ramesh',
-            email: 'ramesh@gmail.com',
-            password: 'cookies',
-            entries: 0,
-            joined: new Date(),
-        },
-        {
-            id: '102',
-            name: 'Suresh',
-            email: 'suresh@gmail.com',
-            password: 'cakes',
-            entries: 0,
-            joined: new Date(),
-        }
-    ]
-}
-
 app.get('/', (req, res) => {
     res.send(database.users)
 });
 
 app.post('/signin', (req, res) => {
-    if (req.body.email === database.users[0].email
-        && req.body.password === database.users[0].password) {
-        res.json(database.users[0])
-    } else {
-        res.status(400).json('error logging in');
-    }
+    const { email, password } = req.body;
+    pgdb.select('email', 'hash').from('login')
+        .where('email', '=', email)
+        .then(data => {
+            const isValid = bcrypt.compareSync(password, data[0].hash)
+            if (isValid) {
+                return pgdb.select('*')
+                    .from('users')
+                    .where('email', '=', email)
+                    .then(user => {
+                        res.json(user[0])
+                    })
+                    .catch(error => {
+                        res.status(400).json('unable to get user')
+                    })
+            }
+            else {
+                res.status(400).json('wrong credentials')
+            }
+        })
+        .catch(error => {
+            res.status(400).json('wrong credentials')
+        })
 });
 
 app.post('/register', (req, res) => {
     const { name, email, password } = req.body;
-    pgdb('users')
-        .returning('*')
-        .insert({
-            email: email,
-            name: name,
-            joined: new Date()
+    const hash = bcrypt.hashSync(password, saltRounds);
+    pgdb.transaction(trx => {
+        trx.insert({
+            hash: hash,
+            email: email
         })
-        .then(user => { res.json(user[0]) })
-        .catch(error => res.status(400).json('unable to register'))
+            .into('login')
+            .returning('email')
+            .then(loginEmail => {
+                return trx('users')
+                    .returning('*')
+                    .insert({
+                        email: loginEmail[0].email,
+                        name: name,
+                        joined: new Date()
+                    })
+                    .then(user => { res.json(user[0]) })
+                    .catch(error => res.status(400).json('unable to register'))
+            })
+            .then(trx.commit)
+            .catch(trx.rollback)
+    })
 })
 
 app.get('/profile/:id', (req, res) => {
