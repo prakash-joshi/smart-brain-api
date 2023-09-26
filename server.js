@@ -40,10 +40,12 @@ app.post('/signin', (req, res) => {
                     })
             }
             else {
+                console.log('here');
                 res.status(400).json('wrong credentials')
             }
         })
         .catch(error => {
+            console.log('there');
             res.status(400).json('wrong credentials')
         })
 });
