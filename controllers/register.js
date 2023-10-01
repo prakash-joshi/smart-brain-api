@@ -1,5 +1,9 @@
 const handleRegister = (req, res, pgdb, bcrypt, saltRounds) => {
     const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+        return res.status(400).json('incorrect user data.')
+    }
     const hash = bcrypt.hashSync(password, saltRounds);
     pgdb.transaction(trx => {
         trx.insert({
