@@ -1,16 +1,16 @@
 const express = require('express');
 const cors = require('cors');
-const app = express();
-const PORT = 8080;
-app.use(express.json());
-app.use(cors());
-const bcrypt = require('bcrypt');
-const saltRounds = 10;
 const knex = require('knex');
 const register = require('./controllers/register');
 const signin = require('./controllers/signin');
 const profile = require('./controllers/profile');
 const image = require('./controllers/image');
+const bcrypt = require('bcrypt');
+const saltRounds = 10; // used to set number of encryption rounds for hashing
+const app = express();
+const PORT = 8080;
+app.use(express.json());
+app.use(cors());
 
 const pgdb = knex({
     client: 'pg',
